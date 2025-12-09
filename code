@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Attendance Tracking System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- HEADER -->
+  <div class="w-full flex justify-center">
+    <div class="text-center text-sm text-gray-400 mt-2 mb-2 w-full">
+      Smart Attendance System - <span id="current-role-bar"></span>
+    </div>
+  </div>
+
+  <!-- LOGIN SECTION -->
+  <div id="login-section" class="mt-10 w-full max-w-md mx-auto bg-white shadow-lg rounded-2xl p-6">
+    <h1 class="text-2xl font-bold mb-4 text-center">Login</h1>
+    <label class="block mb-2">Role</label>
+    <select id="role" class="w-full p-2 border rounded mb-4">
+      <option value="Faculty">Faculty</option>
+      <option value="Student">Student</option>
+      <option value="Incharge">Class Incharge</option>
+      <option value="HoD">HoD</option>
+      <option value="Principal">Principal</option>
+    </select>
+    <label class="block mb-2">User</label>
+    <select id="user" class="w-full p-2 border rounded mb-4"></select>
+    <label id="password-label" class="block mb-2">Password</label>
+    <input type="password" id="password" class="w-full p-2 border rounded mb-4">
+    <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full font-semibold">Login</button>
+  </div>
+
+  <!-- ACTION BAR: Top-Right, Persistent After Login -->
+  <div id="action-bar" class="hidden fixed top-4 right-6 z-50 flex gap-2">
+    <button onclick="changePasswordPrompt()" 
+      class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-full shadow-md border-2 border-white transition duration-150">
+      Change Password
+    </button>
+    <button onclick="logout()" 
+      class="bg-gradient-to-r from-pink-500 to-red-600 hover:from-pink-700 hover:to-red-800 text-white font-extrabold py-2 px-5 rounded-full shadow-xl border-2 border-white ring-2 ring-pink-200 transition duration-150">
+      Logout
+    </button>
+  </div>
+
+  <!-- DASHBOARD SECTION -->
+  <div id="dashboards" class="hidden w-full max-w-5xl mx-auto mt-6 px-4">
+
+    <h2 id="dashboard-title" class="text-xl font-bold mb-4"></h2>
+
+    <!-- PASSWORD MODAL -->
+    <div id="password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-40 hidden items-center justify-center p-4 z-50">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h3 class="text-xl font-bold mb-4">Change Password</h3>
+        <label class="block mb-2">New Password</label>
+        <input type="password" id="new-password" class="w-full p-2 border rounded mb-4">
+        <label class="block mb-2">Confirm New Password</label>
+        <input type="password" id="confirm-password" class="w-full p-2 border rounded mb-4">
+        <div class="flex justify-end gap-2">
+          <button onclick="closePasswordModal()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+          <button onclick="changePassword()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FACULTY DASHBOARD -->
+    <div id="Faculty-dashboard" class="hidden">
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label>Date</label>
+          <input type="date" id="att-date" class="w-full p-2 border rounded mb-2">
+        </div>
+        <div>
+          <label>Hour</label>
+          <select id="att-hour" class="w-full p-2 border rounded mb-2">
+            <option value="">Select Hour</option>
+            <option value="1">Hour 1</option>
+            <option value="2">Hour 2</option>
+            <option value="3">Hour 3</option>
+            <option value="4">Hour 4</option>
+            <option value="5">Hour 5</option>
+            <option value="6">Hour 6</option>
+            <option value="7">Hour 7</option>
+          </select>
+        </div>
+      </div>
+      <label>Class/Subject</label>
+      <select id="att-class" class="w-full p-2 border rounded mb-4">
+        <option value="">Select Class/Subject</option>
+      </select>
+
+      <div class="flex gap-2 mb-4">
+        <button onclick="markAll(true)" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">All Present</button>
+        <button onclick="markAll(false)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">All Absent</button>
+      </div>
+
+      <div id="student-list" class="grid grid-cols-2 gap-2 mb-4"></div>
+      <button onclick="saveAttendance()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Save Attendance</button>
+    </div>
+
+    <!-- STUDENT DASHBOARD -->
+    <div id="Student-dashboard" class="hidden">
+      <h3 class="text-lg font-semibold mb-4">My Attendance</h3>
+      <div id="student-attendance" class="space-y-2"></div>
+    </div>
+
+    <!-- INCHARGE DASHBOARD -->
+    <div id="Incharge-dashboard" class="hidden">
+      <h3 class="text-lg font-semibold mb-4">Defaulter List</h3>
+      <label>Threshold %</label>
+      <input type="number" id="threshold" value="75" class="p-2 border rounded mb-2 w-20">
+      <button onclick="generateDefaulters()" class="bg-blue-600 text-white px-3 py-1 rounded">Generate</button>
+      <ul id="defaulter-list" class="list-disc pl-6 mt-4"></ul>
+    </div>
+
+    <!-- HoD DASHBOARD -->
+    <div id="HoD-dashboard" class="hidden">
+      <h3 class="text-lg font-semibold mb-4">Department Analytics</h3>
+      <canvas id="hodChart" height="60"></canvas>
+    </div>
+
+    <!-- PRINCIPAL DASHBOARD -->
+    <div id="Principal-dashboard" class="hidden">
+      <h3 class="text-lg font-semibold mb-4">Institution Analytics</h3>
+      <canvas id="principalChart" height="60"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    localStorage.clear();
+
+    // Database
+    const DEFAULT_PASS = '123456';
+    const DB = JSON.parse(localStorage.getItem('attendanceDB') || JSON.stringify({
+      students: [
+        {roll:'ECE1',name:'Sumanth',section:'ECE-A'},
+        {roll:'ECE2',name:'Sai Teja',section:'ECE-A'},
+        {roll:'ECE3',name:'Hemanth',section:'ECE-A'},
+        {roll:'ECE4',name:'Lokesh',section:'ECE-A'},
+        {roll:'ECE5',name:'Kiran',section:'ECE-A'},
+        {roll:'ECE6',name:'Mounika',section:'ECE-B'},
+        {roll:'ECE7',name:'Sravanthi',section:'ECE-B'},
+        {roll:'ECE8',name:'Ravi',section:'ECE-B'},
+        {roll:'ECE9',name:'Pavan',section:'ECE-B'},
+        {roll:'ECE10',name:'Sridhar',section:'ECE-B'},
+        {roll:'ECE11',name:'Rahul',section:'ECE-B'},
+        {roll:'ECE12',name:'Pradeep',section:'ECE-B'},
+        {roll:'ECE13',name:'Sowmya',section:'ECE-B'},
+        {roll:'ECE14',name:'Pooja',section:'ECE-B'},
+        {roll:'ECE15',name:'Nikhil',section:'ECE-B'},
+      ],
+      faculty: [
+        {id:'F1',name:'Mr.T.PATTALU NAIDU',subjects:[{id:'EM&I',name:'Electronic Measurements and Instrumentation',section:'ECE-A'}]},
+        {id:'F2',name:'Dr.R.PRASAD RAO',subjects:[{id:'DSP',name:'Digital Signal Processing',section:'ECE-A'},{id:'DSP LAB',name:'Digital Signal Processing LAB',section:'ECE-A'}]},
+        {id:'F3',name:'Mr.B.RAMESH KUMAR',subjects:[{id:'MPMC',name:'Microprocessors and Microcontrollers',section:'ECE-A'},{id:'MPMC LAB',name:'Microprocessors and Microcontroller LAB',section:'ECE-A'}]},
+        {id:'F4',name:'Mrs. D.PAVANA KUMARI',subjects:[{id:'IT&ECC',name:'Information Theory and Error Control Coding',section:'ECE-A'}]},
+        {id:'F5',name:'Mr. P. RAMESH',subjects:[{id:'CS',name:'Communication Systems',section:'ECE-A'}]},
+      ],
+      incharges:[
+        {id:'IC1',name:'Mr. B.RAMESH KUMAR R',section:'ECE-A'},
+        {id:'IC2',name:'Mrs. D.PAVANA KUMARI',section:'ECE-B'}
+      ],
+      admin:[
+        {id:'HoD',name:'HoD',section:'ECE-A'},
+        {id:'Principal',name:'Principal',section:'ECE-A'}
+      ],
+      passwords:{
+        'F1':DEFAULT_PASS, 'F2':DEFAULT_PASS, 'F3':DEFAULT_PASS, 'F4':DEFAULT_PASS, 'F5':DEFAULT_PASS,
+        'IC1':DEFAULT_PASS, 'IC2':DEFAULT_PASS, 'HoD':DEFAULT_PASS, 'Principal':DEFAULT_PASS,
+        'ECE1':'','ECE2':'','ECE3':'','ECE4':'','ECE5':'','ECE6':'','ECE7':'','ECE8':'','ECE9':'','ECE10':'','ECE11':'','ECE12':'','ECE13':'','ECE14':'','ECE15':''
+      },
+      attendance:[]
+    }));
+
+    function saveDB() {
+      localStorage.setItem('attendanceDB', JSON.stringify(DB));
+    }
+
+    function populateUsers() {
+      const role = document.getElementById('role').value;
+      const userSel = document.getElementById('user');
+      const pwInput = document.getElementById('password');
+      const pwLabel = document.getElementById('password-label');
+      userSel.innerHTML = '';
+      if (role === 'Student') {
+        pwInput.classList.add('hidden'); 
+        pwLabel.classList.add('hidden');
+      } else {
+        pwInput.classList.remove('hidden'); 
+        pwLabel.classList.remove('hidden');
+      }
+      if(role==='Faculty') DB.faculty.forEach(f=>{
+        let o=document.createElement('option');o.value=f.id;o.textContent=f.name;userSel.appendChild(o);
+      });
+      else if(role==='Student') DB.students.forEach(s=>{
+        let o=document.createElement('option');o.value=s.roll;o.textContent=${s.roll} - ${s.name};userSel.appendChild(o);
+      });
+      else if(role==='Incharge') DB.incharges.forEach(i=>{
+        let o=document.createElement('option');o.value=i.id;o.textContent=${i.name} (${i.section});userSel.appendChild(o);
+      });
+      else if(role==='HoD'){
+        let o=document.createElement('option');o.value='HoD';o.textContent='HoD';userSel.appendChild(o);
+      }
+      else if(role==='Principal'){
+        let o=document.createElement('option');o.value='Principal';o.textContent='Principal';userSel.appendChild(o);
+      }
+    }
+    document.getElementById('role').addEventListener('change',populateUsers);
+    populateUsers();
+
+    let currentRole='', currentUser=null;
+
+    function login(){
+      currentRole = document.getElementById('role').value;
+      currentUser = document.getElementById('user').value;
+      document.getElementById('current-role-bar').textContent = ${currentRole}: ${currentUser};
+
+      const pw = document.getElementById('password').value;
+      if(currentRole !== 'Student'){
+        const storedPW = DB.passwords[currentUser] || DB.passwords[currentRole];
+        if(pw !== storedPW){ alert('Incorrect password!'); return; }
+      }
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('dashboards').classList.remove('hidden');
+      document.getElementById('action-bar').classList.remove('hidden');
+      document.getElementById('dashboard-title').textContent = ${currentRole} Dashboard;
+      showDashboard(currentRole);
+    }
+
+    function logout(){
+      document.getElementById('dashboards').classList.add('hidden');
+      document.getElementById('login-section').classList.remove('hidden');
+      document.getElementById('action-bar').classList.add('hidden');
+      document.getElementById('password').value='';
+      document.getElementById('current-role-bar').textContent = '';
+    }
+
+    function changePasswordPrompt(){
+      document.getElementById('password-modal').classList.remove('hidden');
+      document.getElementById('password-modal').classList.add('flex');
+    }
+    function closePasswordModal(){
+      document.getElementById('password-modal').classList.add('hidden');
+      document.getElementById('password-modal').classList.remove('flex');
+    }
+    function changePassword(){
+      const np=document.getElementById('new-password').value;
+      const cp=document.getElementById('confirm-password').value;
+      if(np === ''){alert('Password cannot be empty.');return;}
+      if(np !== cp){alert('Passwords do not match!');return;}
+      DB.passwords[currentUser] = np; 
+      saveDB(); 
+      alert('Password changed successfully!');
+      closePasswordModal(); 
+      document.getElementById('new-password').value=''; 
+      document.getElementById('confirm-password').value='';
+    }
+
+    function showDashboard(role){
+      document.querySelectorAll('#dashboards > div').forEach(div=>div.classList.add('hidden'));
+      const dash = document.getElementById(${role}-dashboard);
+      if (dash) dash.classList.remove('hidden');
+      if (role==='Faculty') initFaculty();
+      if (role==='Student') initStudent();
+      if (role==='HoD') drawHodChart();
+      if (role==='Principal') drawPrincipalChart();
+      // Incharge analytics too!
+      if (role === 'Incharge') generateDefaulters();
+    }
+
+    // FACULTY Dashboard Helpers
+    function initFaculty(){
+      const sel=document.getElementById('att-class');
+      sel.innerHTML='<option value="">Select Class/Subject</option>';
+      const faculty=DB.faculty.find(f=>f.id===currentUser);
+      if(faculty) faculty.subjects.forEach(s=>{
+        const opt=document.createElement('option');
+        opt.value=${s.section}|${s.id};
+        opt.textContent=${s.section} - ${s.name};
+        sel.appendChild(opt);
+      });
+      renderStudentList();
+    }
+    function renderStudentList(){
+      const cont=document.getElementById('student-list'); cont.innerHTML='';
+      DB.students.forEach(st=>{
+        const card=document.createElement('div');
+        card.className='p-2 bg-white rounded shadow flex items-center gap-2';
+        card.innerHTML=`<input type="checkbox" id="chk-${st.roll}" checked>
+                        <span>${st.roll} - ${st.name}</span>`;
+        cont.appendChild(card);
+      });
+    }
+    function markAll(present){
+      DB.students.forEach(st=>document.getElementById(chk-${st.roll}).checked=present);
+    }
+    function saveAttendance(){
+      const date=document.getElementById('att-date').value;
+      const hour=document.getElementById('att-hour').value;
+      const classVal=document.getElementById('att-class').value;
+      if(!date || !hour || !classVal){
+        alert("Please fill out all fields (Date, Hour, Class/Subject) before saving."); return;
+      }
+      const [section, subId]=classVal.split('|');
+      DB.students.forEach(st=>{
+        const checked=document.getElementById(chk-${st.roll}).checked;
+        DB.attendance.push({
+          date,hour,section,subId,roll:st.roll,present:checked
+        });
+      });
+      saveDB(); alert('Attendance saved!');
+    }
+    // Student Analytics
+    function initStudent(){
+      const cont=document.getElementById('student-attendance'); cont.innerHTML='';
+      const myRoll=currentUser; const grouped={};
+      DB.attendance.filter(a=>a.roll===myRoll).forEach(a=>{
+        grouped[a.subId]=grouped[a.subId]||{total:0,present:0};
+        grouped[a.subId].total++; if(a.present) grouped[a.subId].present++;
+      });
+      for(const sub in grouped){
+        const perc=(grouped[sub].present/grouped[sub].total*100).toFixed(1);
+        cont.innerHTML+=`<div class="p-3 bg-white rounded shadow">
+          <strong>${sub}</strong> - ${perc}% attendance</div>`;
+      }
+    }
+    // Incharge Analytics
+    function generateDefaulters(){
+      const threshold=+document.getElementById('threshold').value;
+      const list=document.getElementById('defaulter-list'); list.innerHTML='';
+      DB.students.forEach(st=>{
+        let total=0,present=0;
+        DB.attendance.filter(a=>a.roll===st.roll).forEach(a=>{total++; if(a.present) present++;});
+        const perc=total?(present/total*100):100;
+        if(perc<threshold){
+          const li=document.createElement('li'); 
+          li.textContent=${st.roll} - ${st.name} (${perc.toFixed(1)}%); list.appendChild(li);
+        }
+      });
+    }
+    // HoD Analytics
+    function drawHodChart(){
+      const ctx=document.getElementById('hodChart');
+      const subCounts={};
+      DB.attendance.forEach(a=>{
+        subCounts[a.subId]=subCounts[a.subId]||{total:0,present:0};
+        subCounts[a.subId].total++; if(a.present) subCounts[a.subId].present++;
+      });
+      const labels=Object.keys(subCounts);
+      const data=labels.map(l=>(subCounts[l].present/subCounts[l].total*100).toFixed(1));
+      new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'% Present',data}]},options:{scales:{y:{beginAtZero:true,max:100}}}});
+    }
+    // Principal Analytics
+    function drawPrincipalChart(){
+      const ctx=document.getElementById('principalChart');
+      const bySection={};
+      DB.students.forEach(st=>bySection[st.section]=bySection[st.section]||{total:0,present:0});
+      DB.attendance.forEach(a=>{
+        if(bySection[a.section]){
+          bySection[a.section].total++; if(a.present) bySection[a.section].present++;
+        }
+      });
+      const labels=Object.keys(bySection);
+      const data=labels.map(l=>bySection[l].total?bySection[l].present/bySection[l].total*100:0);
+      new Chart(ctx,{type:'pie',data:{labels,datasets:[{label:'% Present',data}]},options:{}});
+    }
+  </script>
+</body>
+</html>
